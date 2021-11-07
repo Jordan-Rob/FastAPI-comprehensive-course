@@ -48,6 +48,8 @@ def create_post(new_post: Post):
     #print(new_post.dict())
     post_dict = new_post.dict()
     post_dict["id"] = randrange(0, 10000)
+    print(post_dict["id"])
+    print(type(post_dict["id"]))
     my_posts.append(post_dict)
     #return {"new post": f"title: {payload['title']} content: {payload['content']}"}
     return {"data": post_dict}
@@ -59,5 +61,17 @@ def delete_post(id: int):
         if post["id"] == id:
             my_posts.remove(post)
             return Response(status_code=status.HTTP_204_NO_CONTENT)
+        else:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id:{id} does not exist!")
+
+@app.put("/posts/{id}")
+def update_post(id: int, updated_post: Post):
+    updated_post_dict = updated_post.dict()
+    
+    for post in my_posts:
+        if post["id"] == id:
+            post_index = my_posts.index(post, 0, len(my_posts))
+            my_posts[post_index] = updated_post_dict
+            return {"data":f"post {post['title']} updated successfully"}
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id:{id} does not exist!")
