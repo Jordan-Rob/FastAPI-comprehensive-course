@@ -1,0 +1,2 @@
+DELETE http://127.0.0.1:8000/posts/7406
+content-type: application/json

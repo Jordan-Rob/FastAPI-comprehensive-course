@@ -1,0 +1,7 @@
+PUT http://127.0.0.1:8000/posts/5549
+content-type: application/json
+
+{
+    "title": "top beaches in florida",
+    "content": "check out these bad beaches"
+}
