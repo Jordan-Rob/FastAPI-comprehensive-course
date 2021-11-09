@@ -1,5 +1,7 @@
 from typing import Optional
-from fastapi import FastAPI, Response, status, HTTPException
+
+from sqlalchemy.orm import Session
+from fastapi import FastAPI, Response, status, HTTPException, Depends
 from fastapi.params import Body
 from pydantic import BaseModel
 from random import randrange
@@ -7,31 +9,45 @@ from random import randrange
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+from .database import engine, get_db
+from . import models
+
+#### connect to DB
+#  ORM SQLALCHEMY
+models.Base.metadata.create_all(bind=engine)
+
 app = FastAPI()
+
 
 class Post(BaseModel):
     title: str
     content: str
     published: bool = True
-    rating: Optional[int] = None
 
 #### connect to DB
-# 1. No ORM
-try:
-    connection = psycopg2.connect(host='localhost', port=5432, database='fastAPI', user='postgres', password="myPassword", cursor_factory=RealDictCursor)
-    cursor = connection.cursor()
-    print("Database connection was successful")
-    cursor.execute("""CREATE TABLE IF NOT EXISTS posts (id serial PRIMARY KEY, title VARCHAR ( 255 ) NOT NULL, content VARCHAR NOT NULL, published BOOLEAN NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL) """)
-    #cursor.execute("""INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) """, ("post1", "post1content", True))
+#  No ORM
+#try:
+#    connection = psycopg2.connect(host='localhost', port=5432, database='fastAPI', user='postgres', password="myPassword", cursor_factory=RealDictCursor)
+#    cursor = connection.cursor()
+#    print("Database connection was successful")
+#    cursor.execute("""CREATE TABLE IF NOT EXISTS posts (id serial PRIMARY KEY, title VARCHAR ( 255 ) NOT NULL, content VARCHAR NOT NULL, published BOOLEAN NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL) """)
+#    #cursor.execute("""INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) """, ("post1", "post1content", True))
 
-except Exception as error:
-    print("Connecting to Database failed")
-    print(f"Error: {error}")
+#except Exception as error:
+#    print("Connecting to Database failed")
+#    print(f"Error: {error}")
 
-
+"""
 my_posts = [{"title":"title of post 1", "content":"content of post 1", "id":1}, 
     {"title":"title of post 2", "content":"content of post 2", "id":2}
 ]
+"""
+
+#### ORM TEST Route
+@app.get("/sql")
+def orm_test(db: Session = Depends(get_db)):
+    posts = db.query(models.Post).all()
+    return {"data": posts}
 
 
 @app.get("/")
@@ -40,19 +56,29 @@ def get_home():
 
 
 @app.get("/posts")
-def get_posts():
-    cursor.execute("""SELECT * FROM posts """)
-    posts = cursor.fetchall()
+def get_posts(db: Session = Depends(get_db)):
+    ## No ORM ##
+    #cursor.execute("""SELECT * FROM posts """)
+    #posts = cursor.fetchall()
+
+    ## ORM ##
+    posts = db.query(models.Post).all()
     print(posts)
     return {'data': posts}
 
 
 @app.get("/posts/{id}")
-def get_post(id: int, response: Response):
+def get_post(id: int, db: Session = Depends(get_db)):
     #print(type(id))
     #post_id = int(id)
-    cursor.execute(""" SELECT * FROM posts WHERE id=%s """, (str(id)))
-    post = cursor.fetchone()
+
+    ## NO ORM ##
+    #cursor.execute(""" SELECT * FROM posts WHERE id=%s """, (str(id)))
+    #post = cursor.fetchone()
+
+    ## ORM ##
+    post = db.query(models.Post).filter(models.Post.id == id).first()
+
     if post:
         return {"data": post}
     else:
@@ -63,7 +89,7 @@ def get_post(id: int, response: Response):
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED)
 #def craete_post(payload: dict = Body(...)):
-def create_post(new_post: Post):
+def create_post(post: Post, db: Session = Depends(get_db)):
     #print(new_post)
     #print(new_post.dict())
 
@@ -74,33 +100,59 @@ def create_post(new_post: Post):
     print(type(post_dict["id"]))
     my_posts.append(post_dict)
     """
-    cursor.execute("""INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING * """, 
-    (new_post.title, new_post.content, new_post.published))
+    ## No ORM ##
+    #cursor.execute("""INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) RETURNING * """, 
+    #(new_post.title, new_post.content, new_post.published))
 
-    post = cursor.fetchone()
-    connection.commit()
+    #post = cursor.fetchone()
+    #connection.commit()
     #return {"new post": f"title: {payload['title']} content: {payload['content']}"}
-    return {"data": post}
+    
+    
+    ## ORM ##
+    #new_post = models.Post(title=post.title, content=post.content, published=post.published)
+    new_post = models.Post(**post.dict())
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
+    
+    return {"data": new_post}
 
 
 @app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(id: int):
-    cursor.execute("""DELETE FROM posts WHERE id=%s RETURNING * """, (str(id)))
-    deleted_post = cursor.fetchone()
-    connection.commit()
-    if deleted_post == None:
+def delete_post(id: int, db: Session = Depends(get_db)):
+    ## NO ORM ##
+    #cursor.execute("""DELETE FROM posts WHERE id=%s RETURNING * """, (str(id)))
+    #deleted_post = cursor.fetchone()
+    #connection.commit()
+
+    ## ORM ##
+    post = db.query(models.Post).filter(models.Post.id == id)
+
+    if post == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id:{id} does not exist!")   
-    else:
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    
+    post.delete(synchronize_session=False)
+    db.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.put("/posts/{id}")
-def update_post(id: int, post: Post):
-    cursor.execute("""UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *""",
-    (post.title, post.content, post.published, str(id)))
-    updated_post = cursor.fetchone()
-    connection.commit()
-    if updated_post == None:
+def update_post(id: int, post: Post, db: Session = Depends(get_db)):
+    ## NO ORM ##
+    #cursor.execute("""UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *""",
+    #(post.title, post.content, post.published, str(id)))
+    #updated_post = cursor.fetchone()
+    #connection.commit()
+
+    ## ORM ##
+    queried_post = db.query(models.Post).filter(models.Post.id == id)
+    pos = queried_post.first()
+    if pos == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id:{id} does not exist!")
-    else:
-        return {"data":updated_post}
+    
+    queried_post.update(post.dict(), synchronize_session=False)
+    db.commit()
+
+    return {"data": queried_post.first()}
