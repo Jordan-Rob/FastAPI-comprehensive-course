@@ -3,14 +3,14 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi import FastAPI, Response, status, HTTPException, Depends
 from fastapi.params import Body
-from pydantic import BaseModel
 from random import randrange
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
 from .database import engine, get_db
-from . import models
+from . import models, schemas
+
 
 #### connect to DB
 #  ORM SQLALCHEMY
@@ -18,11 +18,6 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-
-class Post(BaseModel):
-    title: str
-    content: str
-    published: bool = True
 
 #### connect to DB
 #  No ORM
@@ -89,7 +84,7 @@ def get_post(id: int, db: Session = Depends(get_db)):
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED)
 #def craete_post(payload: dict = Body(...)):
-def create_post(post: Post, db: Session = Depends(get_db)):
+def create_post(post: schemas.Post, db: Session = Depends(get_db)):
     #print(new_post)
     #print(new_post.dict())
 
@@ -139,7 +134,7 @@ def delete_post(id: int, db: Session = Depends(get_db)):
 
 
 @app.put("/posts/{id}")
-def update_post(id: int, post: Post, db: Session = Depends(get_db)):
+def update_post(id: int, post: schemas.Post, db: Session = Depends(get_db)):
     ## NO ORM ##
     #cursor.execute("""UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *""",
     #(post.title, post.content, post.published, str(id)))
