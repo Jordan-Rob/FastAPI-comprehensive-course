@@ -21,12 +21,13 @@ try:
     connection = psycopg2.connect(host='localhost', port=5432, database='fastAPI', user='postgres', password="myPassword", cursor_factory=RealDictCursor)
     cursor = connection.cursor()
     print("Database connection was successful")
+    cursor.execute("""CREATE TABLE IF NOT EXISTS posts (id serial PRIMARY KEY, title VARCHAR ( 255 ) NOT NULL, content VARCHAR NOT NULL, published BOOLEAN NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL) """)
+    #cursor.execute("""INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) """, ("post1", "post1content", True))
+
 except Exception as error:
     print("Connecting to Database failed")
     print(f"Error: {error}")
 
-cursor.execute("""CREATE TABLE IF NOT EXISTS posts (id serial PRIMARY KEY, title VARCHAR ( 255 ) NOT NULL, content VARCHAR NOT NULL, published BOOLEAN NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL) """)
-#cursor.execute("""INSERT INTO posts (title, content, published) VALUES (%s, %s, %s) """, ("post1", "post1content", True))
 
 my_posts = [{"title":"title of post 1", "content":"content of post 1", "id":1}, 
     {"title":"title of post 2", "content":"content of post 2", "id":2}
@@ -84,13 +85,14 @@ def create_post(new_post: Post):
 
 @app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id: int):
-    for post in my_posts:
-        if post["id"] == id:
-            my_posts.remove(post)
-            return Response(status_code=status.HTTP_204_NO_CONTENT)
-        else:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id:{id} does not exist!")
-
+    cursor.execute("""DELETE FROM posts WHERE id=%s RETURNING * """, (str(id)))
+    deleted_post = cursor.fetchone()
+    connection.commit()
+    if deleted_post == None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id:{id} does not exist!")
+           
+    else:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 @app.put("/posts/{id}")
 def update_post(id: int, updated_post: Post):
     updated_post_dict = updated_post.dict()
