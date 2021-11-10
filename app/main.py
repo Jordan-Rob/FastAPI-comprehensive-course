@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from sqlalchemy.orm import Session
 from fastapi import FastAPI, Response, status, HTTPException, Depends
@@ -50,7 +50,7 @@ def get_home():
     return {"mess": "Hello World"}
 
 
-@app.get("/posts")
+@app.get("/posts", response_model=List[schemas.PostResponse])
 def get_posts(db: Session = Depends(get_db)):
     ## No ORM ##
     #cursor.execute("""SELECT * FROM posts """)
@@ -59,10 +59,10 @@ def get_posts(db: Session = Depends(get_db)):
     ## ORM ##
     posts = db.query(models.Post).all()
     print(posts)
-    return {'data': posts}
+    return posts
 
 
-@app.get("/posts/{id}")
+@app.get("/posts/{id}", response_model=schemas.PostResponse)
 def get_post(id: int, db: Session = Depends(get_db)):
     #print(type(id))
     #post_id = int(id)
@@ -75,16 +75,16 @@ def get_post(id: int, db: Session = Depends(get_db)):
     post = db.query(models.Post).filter(models.Post.id == id).first()
 
     if post:
-        return {"data": post}
+        return post
     else:
         #response.status_code = status.HTTP_404_NOT_FOUND
         #return {"error":f"post with id:{id} does not exist!"}
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id:{id} does not exist!")
 
 
-@app.post("/posts", status_code=status.HTTP_201_CREATED)
+@app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponse)
 #def craete_post(payload: dict = Body(...)):
-def create_post(post: schemas.Post, db: Session = Depends(get_db)):
+def create_post(post: schemas.PostCreate, db: Session = Depends(get_db)):
     #print(new_post)
     #print(new_post.dict())
 
@@ -111,7 +111,7 @@ def create_post(post: schemas.Post, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_post)
     
-    return {"data": new_post}
+    return new_post
 
 
 @app.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -133,8 +133,8 @@ def delete_post(id: int, db: Session = Depends(get_db)):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@app.put("/posts/{id}")
-def update_post(id: int, post: schemas.Post, db: Session = Depends(get_db)):
+@app.put("/posts/{id}", response_model=schemas.PostResponse)
+def update_post(id: int, post: schemas.PostCreate, db: Session = Depends(get_db)):
     ## NO ORM ##
     #cursor.execute("""UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *""",
     #(post.title, post.content, post.published, str(id)))
@@ -150,4 +150,4 @@ def update_post(id: int, post: schemas.Post, db: Session = Depends(get_db)):
     queried_post.update(post.dict(), synchronize_session=False)
     db.commit()
 
-    return {"data": queried_post.first()}
+    return queried_post.first()
