@@ -1,2 +1,2 @@
-DELETE http://127.0.0.1:8000/posts/2
+DELETE http://127.0.0.1:8000/posts/6
 content-type: application/json

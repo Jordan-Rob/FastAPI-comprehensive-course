@@ -1,7 +1,7 @@
-PUT http://127.0.0.1:8000/posts/4
+PUT http://127.0.0.1:8000/posts/8
 content-type: application/json
 
 {
-    "title": "top workouts for a summer bod",
+    "title": "top workouts for bigger arms",
     "content": "check out these great workouts today"
 }
