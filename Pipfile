@@ -7,6 +7,7 @@ name = "pypi"
 fastapi = {extras = ["all"], version = "*"}
 psycopg2 = "*"
 sqlalchemy = "*"
+passlib = {extras = ["bcrypt"], version = "*"}
 
 [dev-packages]
 
