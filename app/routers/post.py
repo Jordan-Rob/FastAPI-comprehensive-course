@@ -45,7 +45,7 @@ def get_post(id: int, db: Session = Depends(get_db)):
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponse)
 #def craete_post(payload: dict = Body(...)):
 def create_post(post: schemas.PostCreate, db: Session = Depends(get_db), 
-user_id: int = Depends(oauth2.get_current_user)):
+current_user: int = Depends(oauth2.get_current_user)):
     #print(new_post)
     #print(new_post.dict())
 
@@ -67,8 +67,8 @@ user_id: int = Depends(oauth2.get_current_user)):
     
     ## ORM ##
     #new_post = models.Post(title=post.title, content=post.content, published=post.published)
-    print(user_id)
-    new_post = models.Post(**post.dict())
+    print(current_user.id)
+    new_post = models.Post(user_id = current_user.id, **post.dict())
     db.add(new_post)
     db.commit()
     db.refresh(new_post)
@@ -77,7 +77,7 @@ user_id: int = Depends(oauth2.get_current_user)):
 
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(id: int, db: Session = Depends(get_db), user_id: int = Depends(oauth2.get_current_user)):
+def delete_post(id: int, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     ## NO ORM ##
     #cursor.execute("""DELETE FROM posts WHERE id=%s RETURNING * """, (str(id)))
     #deleted_post = cursor.fetchone()
@@ -89,6 +89,10 @@ def delete_post(id: int, db: Session = Depends(get_db), user_id: int = Depends(o
     if post == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id:{id} does not exist!")   
     
+    if post.first().user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
+                            detail="Not authorized to carry out selected action")
+
     post.delete(synchronize_session=False)
     db.commit()
 
@@ -96,7 +100,7 @@ def delete_post(id: int, db: Session = Depends(get_db), user_id: int = Depends(o
 
 
 @router.put("/{id}", response_model=schemas.PostResponse)
-def update_post(id: int, post: schemas.PostCreate, db: Session = Depends(get_db), user_id: int = Depends(oauth2.get_current_user)):
+def update_post(id: int, post: schemas.PostCreate, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     ## NO ORM ##
     #cursor.execute("""UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *""",
     #(post.title, post.content, post.published, str(id)))
@@ -109,6 +113,10 @@ def update_post(id: int, post: schemas.PostCreate, db: Session = Depends(get_db)
     if pos == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id:{id} does not exist!")
     
+    if pos.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
+                            detail="Not authorized to carry out selected action")
+
     queried_post.update(post.dict(), synchronize_session=False)
     db.commit()
 
