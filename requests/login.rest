@@ -1,0 +1,7 @@
+POST http://127.0.0.1:8000/login
+content-type: application/json
+
+{
+    "email": "lily@cell.io",
+    "password": "check"
+}

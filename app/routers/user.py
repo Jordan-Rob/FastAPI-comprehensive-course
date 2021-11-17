@@ -36,9 +36,9 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     
     return new_user
-    
 
-@router.post("/login")
+
+@router.post("/login", response_model=schemas.Token)
 def login_user(user_cred: schemas.UserLogin, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == user_cred.email).first()
 
