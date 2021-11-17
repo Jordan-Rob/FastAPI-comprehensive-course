@@ -2,8 +2,17 @@ from fastapi import FastAPI, Response, status, HTTPException, Depends, APIRouter
 from .. import models, schemas, utils
 from sqlalchemy.orm import Session
 from ..database import get_db
+from typing import List
 
-router = APIRouter()
+router = APIRouter(
+    tags=["Users"]
+)
+@router.get("/users", response_model =List[schemas.UserResponse])
+def get_user( db: Session = Depends(get_db)):
+    users = db.query(models.User).all()
+
+    return users
+
 
 @router.get("/users/{id}", response_model = schemas.UserResponse)
 def get_user(id: int, db: Session = Depends(get_db)):
@@ -16,7 +25,7 @@ def get_user(id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED, response_model=schemas.UserResponse)
-def create_post(user: schemas.UserCreate, db: Session = Depends(get_db)):
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     
     hashed_password = utils.hash(user.password)
     user.password = hashed_password
@@ -27,3 +36,17 @@ def create_post(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     
     return new_user
+
+@router.post("/login")
+def login_user(user_cred: schemas.UserLogin, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == user_cred.email).first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials")
+    
+    if not utils.verify(user_cred.password, user.password):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Invalid Credentials")
+
+    #create token
+    #return token
+    return {"token":"example token"}

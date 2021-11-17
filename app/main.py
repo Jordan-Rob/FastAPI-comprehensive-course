@@ -9,7 +9,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 from .database import engine, get_db
-from . import models, schemas, utils
+from . import models
 from .routers import post, user
 
 

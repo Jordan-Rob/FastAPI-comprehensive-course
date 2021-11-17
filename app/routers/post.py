@@ -4,10 +4,13 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from typing import List
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/posts",
+    tags=["Posts"]
+    )
 
 
-@router.get("/posts", response_model=List[schemas.PostResponse])
+@router.get("/", response_model=List[schemas.PostResponse])
 def get_posts(db: Session = Depends(get_db)):
     ## No ORM ##
     #cursor.execute("""SELECT * FROM posts """)
@@ -19,7 +22,7 @@ def get_posts(db: Session = Depends(get_db)):
     return posts
 
 
-@router.get("/posts/{id}", response_model=schemas.PostResponse)
+@router.get("/{id}", response_model=schemas.PostResponse)
 def get_post(id: int, db: Session = Depends(get_db)):
     #print(type(id))
     #post_id = int(id)
@@ -39,7 +42,7 @@ def get_post(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"post with id:{id} does not exist!")
 
 
-@router.post("/posts", status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponse)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponse)
 #def craete_post(payload: dict = Body(...)):
 def create_post(post: schemas.PostCreate, db: Session = Depends(get_db)):
     #print(new_post)
@@ -71,7 +74,7 @@ def create_post(post: schemas.PostCreate, db: Session = Depends(get_db)):
     return new_post
 
 
-@router.delete("/posts/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id: int, db: Session = Depends(get_db)):
     ## NO ORM ##
     #cursor.execute("""DELETE FROM posts WHERE id=%s RETURNING * """, (str(id)))
@@ -90,7 +93,7 @@ def delete_post(id: int, db: Session = Depends(get_db)):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.put("/posts/{id}", response_model=schemas.PostResponse)
+@router.put("/{id}", response_model=schemas.PostResponse)
 def update_post(id: int, post: schemas.PostCreate, db: Session = Depends(get_db)):
     ## NO ORM ##
     #cursor.execute("""UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *""",
