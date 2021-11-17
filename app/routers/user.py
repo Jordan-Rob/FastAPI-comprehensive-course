@@ -36,6 +36,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     
     return new_user
+    
 
 @router.post("/login")
 def login_user(user_cred: schemas.UserLogin, db: Session = Depends(get_db)):
