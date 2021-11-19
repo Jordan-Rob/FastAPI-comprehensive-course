@@ -1,17 +1,15 @@
-from typing import Optional, List
-
 from sqlalchemy.orm import Session
-from fastapi import FastAPI, Response, status, HTTPException, Depends
+from fastapi import FastAPI,  Depends
 from fastapi.params import Body
-from random import randrange
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
 from .database import engine, get_db
-from . import models
+from . import models, config
 from .routers import post, user
 
+print(config.settings.database_username)
 
 #### connect to DB
 #  ORM SQLALCHEMY
