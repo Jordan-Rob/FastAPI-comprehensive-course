@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from fastapi import FastAPI,  Depends
 from fastapi.params import Body
+from fastapi.middleware.cors import CORSMiddleware
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -16,6 +17,16 @@ print(config.settings.database_username)
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 #### connect to DB
